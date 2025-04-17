@@ -16,6 +16,7 @@ import {
 import { useState, useEffect, useRef } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 import StarsCanvas from "@/components/StarBackground"
+import Navbar from "@/components/navbar"
 
 // Custom components
 const AnimatedSection = ({ children, delay = 0, className = "" }) => {
@@ -217,6 +218,7 @@ export default function Home() {
   return (
     <>
     <StarsCanvas />
+    <Navbar />
 
     <main className="min-h-screen w-full bg-[#030014] font-sans overflow-hidden">
       {/* Hero Section with 3D Effect */}
