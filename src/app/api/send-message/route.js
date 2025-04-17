@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { RoomServiceClient } from 'livekit-server-sdk';
+import { RoomServiceClient, DataPacket_Kind } from 'livekit-server-sdk';
 
 const host = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 const apiKey = process.env.NEXT_PUBLIC_LIVEKIT_API_KEY;
@@ -9,20 +9,27 @@ const roomService = new RoomServiceClient(host, apiKey, apiSecret);
 
 export async function POST(req) {
   try {
+    
     const body = await req.json();
-    const { room, message, topic = '', sender = 'server' } = body;
+    const { room, message, topic = '', sender = 'server' , user} = body;
 
-    if (!room || !message) {
+    if (!room || !message || ! user) {
       return NextResponse.json({ error: 'Missing room or message' }, { status: 400 });
     }
 
-    const encoded = new TextEncoder().encode(message);
+    let encoded  = {};
 
-    // Broadcast message to all participants
-    await roomService.sendData(room, encoded, {
-      kind: 'RELIABLE', // RELIABLE or LOSSY
-      topic,
-    });
+    encoded.message = new TextEncoder().encode(message);
+    encoded.user = user;
+
+    // Define the SendDataOptions based on the given data
+    const options = {
+      kind: DataPacket_Kind.RELIABLE, // RELIABLE or LOSSY
+      topic: topic, // Topic is optional, you can use the default empty string if not provided
+    };
+
+    // Broadcast message to all participants in the specified room
+    await roomService.sendData(room, encoded, DataPacket_Kind.RELIABLE, options);
 
     return NextResponse.json({ success: true, message: 'Message sent' });
   } catch (err) {

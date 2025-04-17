@@ -11,12 +11,14 @@ import {
 import { Room, Track } from 'livekit-client';
 import '@livekit/components-styles';
 import { useEffect, useState } from 'react';
-import { RoomServiceClient } from 'livekit-server-sdk';
 
+import ChatBox from './chatbot';
 export default function Page() {
+  
+  
   // TODO: get user input for room and name
   const room = 'quickstart-room';
-  const name = 'sadhvik';
+  const name = 'ashish11';
   const [roomInstance] = useState(() => new Room({
     // Optimize video quality for each participant's screen
     adaptiveStream: true,
@@ -38,6 +40,23 @@ export default function Page() {
         if (data.token) {
           await roomInstance.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL, data.token);
         }
+
+        //--------------------------------------------
+
+        roomInstance.on('dataReceived', (payload, participant) => {
+          const message = new TextDecoder().decode(payload); 
+          console.log(`Message from ${participant}: ${payload}`);
+        
+          // setMessages((prev) => [
+          //   ...prev,
+          //   {
+          //     sender: participant,
+          //     text: message,
+          //   },
+          // ]);
+        });
+        
+
       } catch (e) {
         console.error(e);
       }
@@ -48,6 +67,8 @@ export default function Page() {
       roomInstance.disconnect();
     };
   }, [roomInstance]);
+
+  
 
   if (token === '') {
     return <div>Getting token...</div>;
@@ -64,6 +85,7 @@ export default function Page() {
         <ControlBar />
       </div>
       <button onClick={() => getAllParticipantDetails("quickstart-room")}>get all details</button>
+      <ChatBox roomName={"quickstart-room"} user={name}/>
     </RoomContext.Provider>
   );
 }
