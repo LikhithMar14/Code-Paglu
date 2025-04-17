@@ -391,6 +391,13 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
   const sendChatMessage = useCallback(() => {
     if (!chatInput.trim() || !room || !room.localParticipant) return;
     
+    // Check if the room is connected before sending data
+    if (room.state !== ConnectionState.Connected) {
+      console.warn('Cannot send chat message: Room is not connected');
+      setErrorDetails('Cannot send message: Room is not connected');
+      return;
+    }
+    
     try {
       const data = {
         type: 'chat',
@@ -412,12 +419,30 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
       setChatInput('');
     } catch (e) {
       console.error('Error sending chat message:', e);
+      setErrorDetails('Failed to send message: ' + e.message);
+      
+      // If we get a connection error, try to reconnect
+      if (e.message && e.message.includes('PC manager is closed')) {
+        console.log('Connection appears to be closed, attempting to reconnect...');
+        // Only attempt to reconnect if we're not already trying
+        if (connectionStatus !== 'connecting' && connectionStatus !== 'reconnecting') {
+          setConnectionStatus('reconnecting');
+          // Trigger a reconnection by updating the retry count
+          setRetryCount(prev => prev + 1);
+        }
+      }
     }
-  }, [chatInput, room]);
+  }, [chatInput, room, connectionStatus]);
   
   // Send code update function
   const sendCodeUpdate = useCallback(() => {
     if (!room || !room.localParticipant) return;
+    
+    // Check if the room is connected before sending data
+    if (room.state !== ConnectionState.Connected) {
+      console.warn('Cannot send code update: Room is not connected');
+      return;
+    }
     
     try {
       const data = {
@@ -430,20 +455,40 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
       room.localParticipant.publishData(encoded);
     } catch (e) {
       console.error('Error sending code update:', e);
+      // If we get a connection error, try to reconnect
+      if (e.message && e.message.includes('PC manager is closed')) {
+        console.log('Connection appears to be closed, attempting to reconnect...');
+        // Only attempt to reconnect if we're not already trying
+        if (connectionStatus !== 'connecting' && connectionStatus !== 'reconnecting') {
+          setConnectionStatus('reconnecting');
+          // Trigger a reconnection by updating the retry count
+          setRetryCount(prev => prev + 1);
+        }
+      }
     }
-  }, [code, language, room]);
+  }, [code, language, room, connectionStatus]);
   
-  // Editor functions
-  const handleEditorChange = (value) => {
+  // Handle editor changes
+  const handleEditorChange = useCallback((value) => {
     setCode(value);
-    // Debounce sending code updates to avoid flooding
-    if (room && room.localParticipant) {
-      clearTimeout(window.codeUpdateTimeout);
-      window.codeUpdateTimeout = setTimeout(() => {
-        sendCodeUpdate();
-      }, 1000);
+    
+    // Only send updates if we're connected
+    if (room && room.state === ConnectionState.Connected) {
+      // Debounce the code updates to prevent flooding
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+      
+      debounceTimeout.current = setTimeout(() => {
+        try {
+          sendCodeUpdate(value);
+        } catch (e) {
+          console.error('Error in debounced code update:', e);
+          // Don't set error details here as it might flood the UI
+        }
+      }, 1000); // Wait 1 second before sending update
     }
-  };
+  }, [room, sendCodeUpdate]);
 
   const handleEditorDidMount = (editor, monaco) => {
     console.log("Editor mounted successfully");
