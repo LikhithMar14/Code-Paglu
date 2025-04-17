@@ -158,7 +158,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/cvlikhith/code-paglu/src/generated/prisma",
+      "value": "C:\\Users\\atuku\\OneDrive\\Desktop\\Code-Paglu\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -167,12 +167,12 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "darwin-arm64",
+        "value": "windows",
         "native": true
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/cvlikhith/code-paglu/prisma/schema.prisma",
+    "sourceFilePath": "C:\\Users\\atuku\\OneDrive\\Desktop\\Code-Paglu\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -186,11 +186,12 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL",
-        "value": "postgresql://neondb_owner:npg_5n6AtYfDvNUz@ep-dark-mouse-a19ub4i7-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+        "value": null
       }
     }
   },
