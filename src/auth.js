@@ -25,6 +25,7 @@ export const authOptions = {
           const user = await db.user.findUnique({
             where: { email: credentials.email }
           });
+          console.log("User:", user);
 
           if (!user || !user.password) {
             throw new Error("Invalid email or password");
@@ -61,6 +62,7 @@ export const authOptions = {
           let dbUser = await db.user.findUnique({
             where: { email: profile.email },
           });
+          console.log("dbUser:", dbUser);
           
           if (!dbUser) {
             // Simplify name handling
@@ -75,7 +77,7 @@ export const authOptions = {
             });
             console.log("User created:", dbUser);
           } else {
-            // Update existing user info if needed
+
             await db.user.update({
               where: { email: profile.email },
               data: {
