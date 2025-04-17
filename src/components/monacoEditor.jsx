@@ -58,7 +58,7 @@ const LANGUAGE_MAPPING = {
 
 const THEMES = ["vs", "vs-dark", "hc-black", "hc-light"];
 
-export default function CodeEditorPage() {
+export const MonacoEditorPage = () => {
   const [code, setCode] = useState("// Write your code here");
   const [language, setLanguage] = useState("javascript");
   const [theme, setTheme] = useState("vs-dark");
@@ -362,4 +362,6 @@ export default function CodeEditorPage() {
       )}
     </div>
   );
-}
+};
+
+export default MonacoEditorPage;

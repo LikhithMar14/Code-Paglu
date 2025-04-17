@@ -14,47 +14,6 @@ import { Room, Track, ConnectionState, RoomEvent, ParticipantEvent } from 'livek
 import '@livekit/components-styles';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import dynamic from "next/dynamic";
-
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-});
-
-const LANGUAGES = [
-  "javascript",
-  "typescript",
-  "html",
-  "css",
-  "json",
-  "python",
-  "java",
-  "c",
-  "cpp",
-  "csharp",
-  "php",
-  "ruby",
-  "go",
-  "rust",
-  "sql",
-  "markdown",
-  "yaml",
-  "shell",
-  "xml",
-];
-
-// Languages supported by Piston API with correct language identifiers
-const RUNNABLE_LANGUAGES = {
-  "javascript": { language: "javascript", version: "18.15.0" },
-  "python": { language: "python", version: "3.10.0" },
-  "java": { language: "java", version: "15.0.2" },
-  "c": { language: "c", version: "10.2.0" },
-  "cpp": { language: "cpp", version: "10.2.0" },
-  "csharp": { language: "csharp", version: "6.12.0" },
-  "php": { language: "php", version: "8.2.3" },
-  "ruby": { language: "ruby", version: "3.2.1" },
-  "go": { language: "go", version: "1.20.2" },
-  "rust": { language: "rust", version: "1.68.2" },
-};
 
 export default function Page() {
   // Create a room instance but don't connect yet
@@ -89,57 +48,89 @@ export default function Page() {
   if (!joined) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-slate-800 to-slate-900 p-4">
-        <div className="w-full max-w-md p-8 bg-slate-800 rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold text-white mb-6 text-center">Join Room</h1>
+        <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-2xl">
+          <h1 className="text-2xl font-bold mb-6 text-center text-slate-800">Join Video Chat</h1>
           
           {errorDetails && (
-            <div className="mb-4 p-3 bg-red-900/50 border border-red-500 text-red-200 rounded">
+            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 flex items-center">
+              <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
               {errorDetails}
             </div>
           )}
           
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-slate-300 mb-1">Room Name</label>
-            <input
-              type="text"
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter room name"
-            />
+          <div className="mb-5">
+            <label className="block text-slate-700 text-sm font-medium mb-2" htmlFor="room-name">
+              Room Name
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+              </div>
+              <input
+                id="room-name"
+                type="text"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                className="pl-10 block w-full rounded-lg border border-slate-300 bg-slate-50 py-3 px-4 text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                placeholder="Enter room name"
+              />
+            </div>
           </div>
           
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-300 mb-1">Your Name</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your name"
-            />
+            <label className="block text-slate-700 text-sm font-medium mb-2" htmlFor="username">
+              Your Name
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+              </div>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="pl-10 block w-full rounded-lg border border-slate-300 bg-slate-50 py-3 px-4 text-slate-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                placeholder="Enter your name"
+              />
+            </div>
           </div>
           
-          <Button 
+          <button
             onClick={handleJoinRoom}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
           >
             Join Room
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
-  // If joined, show the room with editor
+  // If joined, show the room component - Wrap the VideoRoom with RoomContext.Provider
   return (
     <RoomContext.Provider value={roomInstance}>
-      <CombinedRoom room={roomInstance} roomName={roomName} username={username} onLeave={() => setJoined(false)} />
+      <VideoRoom 
+        room={roomInstance} 
+        roomName={roomName} 
+        username={username}
+        onLeave={() => {
+          roomInstance.disconnect();
+          setJoined(false);
+          setConnectionStatus('initializing');
+        }}
+      />
     </RoomContext.Provider>
   );
 }
 
-function CombinedRoom({ room, roomName, username, onLeave }) {
+function VideoRoom({ room, roomName, username, onLeave }) {
   const [connectionStatus, setConnectionStatus] = useState('initializing');
   const [errorDetails, setErrorDetails] = useState(null);
   const [participantCount, setParticipantCount] = useState(0);
@@ -150,25 +141,8 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
   const [isMobile, setIsMobile] = useState(false);
   const [isControlsVisible, setIsControlsVisible] = useState(true);
   const [controlsTimeout, setControlsTimeout] = useState(null);
-  const [showEditor, setShowEditor] = useState(true);
-  const [editorLayout, setEditorLayout] = useState('split'); // 'split', 'full', 'hidden'
-  const [retryCount, setRetryCount] = useState(0);
-  const [maxRetries, setMaxRetries] = useState(3);
   const chatContainerRef = useRef(null);
   const controlsContainerRef = useRef(null);
-  
-  // Editor state
-  const [code, setCode] = useState("// Write your code here");
-  const [language, setLanguage] = useState("javascript");
-  const [theme, setTheme] = useState("vs-dark");
-  const [fontSize, setFontSize] = useState(14);
-  const [minimapEnabled, setMinimapEnabled] = useState(true);
-  const [output, setOutput] = useState("");
-  const [isRunning, setIsRunning] = useState(false);
-  const [showOutput, setShowOutput] = useState(false);
-  const [error, setError] = useState("");
-  const [userInput, setUserInput] = useState("");
-  const [editorHeight, setEditorHeight] = useState("400px");
   
   // Add the tracks hook here at the top level
   const tracks = useTracks(
@@ -204,88 +178,82 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
     const handleMouseMove = () => {
       setIsControlsVisible(true);
       
-      // Clear any existing timeout
       if (controlsTimeout) {
         clearTimeout(controlsTimeout);
       }
       
-      // Set a new timeout to hide controls after 3 seconds
       const timeout = setTimeout(() => {
-        setIsControlsVisible(false);
+        if (!showSettings && !showChat) {
+          setIsControlsVisible(false);
+        }
       }, 3000);
       
       setControlsTimeout(timeout);
     };
     
-    // Add event listener
-    document.addEventListener('mousemove', handleMouseMove);
+    // Only for desktop
+    if (!isMobile) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('click', handleMouseMove);
+    }
     
-    // Clean up
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
+      if (!isMobile) {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('click', handleMouseMove);
+      }
+      
       if (controlsTimeout) {
         clearTimeout(controlsTimeout);
       }
     };
-  }, [controlsTimeout]);
+  }, [isMobile, controlsTimeout, showSettings, showChat]);
 
-  // Handle connection state changes
-  const handleConnectionStateChanged = (state) => {
-    console.log('Connection state changed:', state);
-    setConnectionStatus(state);
-    
-    if (state === ConnectionState.Connected) {
-      console.log('Connected to room');
-      setRetryCount(0); // Reset retry count on successful connection
-    } else if (state === ConnectionState.Disconnected) {
-      console.log('Disconnected from room');
-    } else if (state === ConnectionState.Connecting) {
-      console.log('Connecting to room...');
-    } else if (state === ConnectionState.Reconnecting) {
-      console.log('Reconnecting to room...');
-    }
-  };
-
-  // Handle participant connected
-  const handleParticipantConnected = () => {
-    console.log('Participant connected');
-    setParticipantCount(room.participants.size + 1); // +1 for local participant
-  };
-
-  // Handle participant disconnected
-  const handleParticipantDisconnected = () => {
-    console.log('Participant disconnected');
-    setParticipantCount(room.participants.size + 1); // +1 for local participant
-  };
-
-  // Handle data received
-  const handleDataReceived = (payload, participant) => {
-    console.log('Data received:', payload, 'from:', participant.identity);
-    
-    try {
-      const data = JSON.parse(new TextDecoder().decode(payload));
-      
-      if (data.type === 'chat') {
-        setChatMessages(prev => [...prev, {
-          id: Date.now(),
-          sender: participant.identity,
-          message: data.message,
-          timestamp: new Date().toISOString()
-        }]);
-      } else if (data.type === 'code') {
-        // Handle code updates from other participants
-        setCode(data.code);
-        setLanguage(data.language);
-      }
-    } catch (e) {
-      console.error('Error parsing data:', e);
-    }
-  };
-
-  // Connect to room
+  // Connect to the room when component mounts
   useEffect(() => {
     let mounted = true;
-    let connectionTimeout;
+    
+    // Listen for connection state changes
+    const handleConnectionStateChanged = (state) => {
+      console.log('Connection state changed:', state);
+      if (state === ConnectionState.Disconnected) {
+        setConnectionStatus('disconnected');
+      } else if (state === ConnectionState.Connected) {
+        setConnectionStatus('connected');
+        // Count participants when connected
+        const participantCount = room.participants ? room.participants.size + 1 : 1; // +1 for local participant
+        setParticipantCount(participantCount);
+      }
+    };
+    
+    // Listen for participant joins/leaves
+    const handleParticipantConnected = () => {
+      const participantCount = room.participants ? room.participants.size + 1 : 1;
+      console.log('Participant connected, count:', participantCount);
+      setParticipantCount(participantCount);
+    };
+    
+    const handleParticipantDisconnected = () => {
+      const participantCount = room.participants ? room.participants.size + 1 : 1;
+      console.log('Participant disconnected, count:', participantCount);
+      setParticipantCount(participantCount);
+    };
+    
+    // Listen for data messages
+    const handleDataReceived = (payload, participant) => {
+      try {
+        const data = JSON.parse(new TextDecoder().decode(payload));
+        if (data.type === 'chat') {
+          setChatMessages(prev => [...prev, {
+            sender: participant.identity || 'Unknown',
+            message: data.message,
+            timestamp: new Date()
+          }]);
+        }
+      } catch (e) {
+        console.error('Failed to parse data message', e);
+      }
+    };
     
     // Add event listeners
     room.on(RoomEvent.ConnectionStateChanged, handleConnectionStateChanged);
@@ -296,36 +264,39 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
     async function connectToRoom() {
       try {
         setConnectionStatus('connecting');
+        console.log('Fetching token...');
         
-        // Check environment variables first
-        const envCheckResponse = await fetch('/api/check-env');
-        const envCheckData = await envCheckResponse.json();
-        console.log('Environment check:', envCheckData);
-        
-        if (!envCheckData.LIVEKIT_API_KEY || !envCheckData.LIVEKIT_API_SECRET || !envCheckData.NEXT_PUBLIC_LIVEKIT_URL) {
-          throw new Error('Missing required environment variables');
-        }
-        
-        // Get token from server
-        console.log('Fetching token for room:', roomName, 'username:', username);
-        const response = await fetch(`/api/get-token?room=${roomName}&username=${username}`);
+        // Get token from API
+        const response = await fetch(`/api/token?room=${encodeURIComponent(roomName)}&username=${encodeURIComponent(username)}`);
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Token fetch failed:', response.status, errorText);
-          throw new Error(`Failed to get token: ${response.statusText} - ${errorText}`);
+          throw new Error(`Failed to get token: ${response.status} ${errorText}`);
         }
         
-        const data = await response.json();
-        console.log('Token response received:', !!data.token);
+        // Parse response
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
         
-        if (!data.token) {
-          throw new Error('No token received from server');
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (e) {
+          throw new Error(`Invalid JSON response: ${e.message}\nResponse: ${responseText}`);
         }
         
-        // Get WebSocket URL from environment
-        const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+        if (!mounted) return;
         
+        if (!data || !data.token) {
+          throw new Error('No token returned from server');
+        }
+
+        // Get the WebSocket URL from env
+        // Safely check if process.env exists (fixes undefined error on mobile)
+        const wsUrl = typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_LIVEKIT_URL 
+          ? process.env.NEXT_PUBLIC_LIVEKIT_URL 
+          : null;
+          
         if (!wsUrl) {
           throw new Error("Missing NEXT_PUBLIC_LIVEKIT_URL - Make sure it's properly set in your environment");
         }
@@ -334,7 +305,7 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
         console.log('Room name:', roomName);
         console.log('Username:', username);
         
-        // Connect to the room with the token string directly
+        // Connect to the room
         await room.connect(wsUrl, data.token);
         console.log('Connected to room successfully');
         
@@ -349,19 +320,6 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
         console.error('LiveKit connect error:', e);
         setConnectionStatus('connection-failed');
         setErrorDetails(e.message || 'Unknown connection error');
-        
-        // Retry connection if we haven't exceeded max retries
-        if (retryCount < maxRetries) {
-          console.log(`Retrying connection (${retryCount + 1}/${maxRetries})...`);
-          setRetryCount(prev => prev + 1);
-          
-          // Wait 2 seconds before retrying
-          connectionTimeout = setTimeout(() => {
-            if (mounted) {
-              connectToRoom();
-            }
-          }, 2000);
-        }
       }
     }
 
@@ -375,28 +333,16 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
       room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
       room.off(RoomEvent.DataReceived, handleDataReceived);
       
-      // Clear any pending timeouts
-      if (connectionTimeout) {
-        clearTimeout(connectionTimeout);
-      }
-      
       // Disconnect from room
       if (room && room.state !== ConnectionState.Disconnected) {
         room.disconnect();
       }
     };
-  }, [room, roomName, username, retryCount, maxRetries]);
+  }, [room, roomName, username]);
   
   // Send chat message function
   const sendChatMessage = useCallback(() => {
     if (!chatInput.trim() || !room || !room.localParticipant) return;
-    
-    // Check if the room is connected before sending data
-    if (room.state !== ConnectionState.Connected) {
-      console.warn('Cannot send chat message: Room is not connected');
-      setErrorDetails('Cannot send message: Room is not connected');
-      return;
-    }
     
     try {
       const data = {
@@ -404,447 +350,404 @@ function CombinedRoom({ room, roomName, username, onLeave }) {
         message: chatInput.trim()
       };
       
-      const encoded = new TextEncoder().encode(JSON.stringify(data));
-      room.localParticipant.publishData(encoded);
+      room.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify(data)),
+        { reliable: true }
+      );
       
-      // Add message to local chat
+      // Add own message to chat
       setChatMessages(prev => [...prev, {
-        id: Date.now(),
-        sender: room.localParticipant.identity,
+        sender: username,
         message: chatInput.trim(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date(),
+        isLocal: true
       }]);
       
-      // Clear input
       setChatInput('');
     } catch (e) {
-      console.error('Error sending chat message:', e);
-      setErrorDetails('Failed to send message: ' + e.message);
-      
-      // If we get a connection error, try to reconnect
-      if (e.message && e.message.includes('PC manager is closed')) {
-        console.log('Connection appears to be closed, attempting to reconnect...');
-        // Only attempt to reconnect if we're not already trying
-        if (connectionStatus !== 'connecting' && connectionStatus !== 'reconnecting') {
-          setConnectionStatus('reconnecting');
-          // Trigger a reconnection by updating the retry count
-          setRetryCount(prev => prev + 1);
-        }
-      }
+      console.error('Failed to send chat message', e);
     }
-  }, [chatInput, room, connectionStatus]);
-  
-  // Send code update function
-  const sendCodeUpdate = useCallback(() => {
-    if (!room || !room.localParticipant) return;
-    
-    // Check if the room is connected before sending data
-    if (room.state !== ConnectionState.Connected) {
-      console.warn('Cannot send code update: Room is not connected');
-      return;
-    }
-    
-    try {
-      const data = {
-        type: 'code',
-        code: code,
-        language: language
-      };
-      
-      const encoded = new TextEncoder().encode(JSON.stringify(data));
-      room.localParticipant.publishData(encoded);
-    } catch (e) {
-      console.error('Error sending code update:', e);
-      // If we get a connection error, try to reconnect
-      if (e.message && e.message.includes('PC manager is closed')) {
-        console.log('Connection appears to be closed, attempting to reconnect...');
-        // Only attempt to reconnect if we're not already trying
-        if (connectionStatus !== 'connecting' && connectionStatus !== 'reconnecting') {
-          setConnectionStatus('reconnecting');
-          // Trigger a reconnection by updating the retry count
-          setRetryCount(prev => prev + 1);
-        }
-      }
-    }
-  }, [code, language, room, connectionStatus]);
-  
-  // Handle editor changes
-  const handleEditorChange = useCallback((value) => {
-    setCode(value);
-    
-    // Only send updates if we're connected
-    if (room && room.state === ConnectionState.Connected) {
-      // Debounce the code updates to prevent flooding
-      if (debounceTimeout.current) {
-        clearTimeout(debounceTimeout.current);
-      }
-      
-      debounceTimeout.current = setTimeout(() => {
-        try {
-          sendCodeUpdate(value);
-        } catch (e) {
-          console.error('Error in debounced code update:', e);
-          // Don't set error details here as it might flood the UI
-        }
-      }, 1000); // Wait 1 second before sending update
-    }
-  }, [room, sendCodeUpdate]);
+  }, [chatInput, room, username]);
 
-  const handleEditorDidMount = (editor, monaco) => {
-    console.log("Editor mounted successfully");
-    editor.focus();
-
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function () {
-      console.log("Saving code:", code);
-    });
-
-    // Add run command shortcut (Ctrl+Enter)
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function () {
-      runCode();
-    });
-  };
-
-  const runCode = async () => {
-    setIsRunning(true);
-    setShowOutput(true);
-    setError("");
-    setOutput("Running...");
-
-    if (!RUNNABLE_LANGUAGES[language]) {
-      setError(`Language '${language}' is not supported for execution.`);
-      setIsRunning(false);
-      return;
-    }
-
-    // Handle language-specific cases
-    let codeToRun = code;
-    let langConfig = RUNNABLE_LANGUAGES[language];
-    
-    // Special handling for certain languages
-    if (language === "c" || language === "cpp") {
-      // For C/C++, add a main function if not present
-      if (!codeToRun.includes("int main(") && !codeToRun.includes("void main(")) {
-        codeToRun = `int main() {\n${codeToRun}\nreturn 0;\n}`;
-      }
-    }
-
-    try {
-      const response = await fetch("https://emkc.org/api/v2/piston/execute", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          language: langConfig.language,
-          version: langConfig.version,
-          files: [
-            {
-              name: `main.${getFileExtension(language)}`,
-              content: codeToRun,
-            },
-          ],
-          stdin: userInput,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setOutput(data.output || "No output");
-      } else {
-        setError(data.error || "Unknown error occurred");
-      }
-    } catch (err) {
-      setError(`Error: ${err.message}`);
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  const getFileExtension = (lang) => {
-    const extensions = {
-      javascript: "js",
-      typescript: "ts",
-      python: "py",
-      java: "java",
-      c: "c",
-      cpp: "cpp",
-      csharp: "cs",
-      php: "php",
-      ruby: "rb",
-      go: "go",
-      rust: "rs",
-    };
-    return extensions[lang] || "txt";
-  };
-
-  const getLanguagePlaceholder = (lang) => {
-    const placeholders = {
-      javascript: "// Write your JavaScript code here",
-      python: "# Write your Python code here",
-      java: "public class Main {\n    public static void main(String[] args) {\n        // Write your Java code here\n    }\n}",
-      c: "int main() {\n    // Write your C code here\n    return 0;\n}",
-      cpp: "int main() {\n    // Write your C++ code here\n    return 0;\n}",
-      csharp: "using System;\n\nclass Program {\n    static void Main(string[] args) {\n        // Write your C# code here\n    }\n}",
-      php: "<?php\n// Write your PHP code here\n?>",
-      ruby: "# Write your Ruby code here",
-      go: "package main\n\nimport \"fmt\"\n\nfunc main() {\n    // Write your Go code here\n}",
-      rust: "fn main() {\n    // Write your Rust code here\n}",
-    };
-    return placeholders[lang] || `// Write your ${lang} code here`;
-  };
-
-  const handleLanguageChange = (newLang) => {
-    setLanguage(newLang);
-    setCode(getLanguagePlaceholder(newLang));
-    sendCodeUpdate();
-  };
-
-  const adjustEditorHeight = () => {
-    const windowHeight = window.innerHeight;
-    // Account for the navbar (48px) and editor toolbar (40px)
-    const newHeight = windowHeight - 88;
-    setEditorHeight(`${newHeight}px`);
-  };
-
-  useEffect(() => {
-    adjustEditorHeight();
-    window.addEventListener("resize", adjustEditorHeight);
-    return () => window.removeEventListener("resize", adjustEditorHeight);
-  }, []);
-
-  // Toggle editor visibility
-  const toggleEditor = () => {
-    if (editorLayout === 'split') {
-      setEditorLayout('full');
-    } else if (editorLayout === 'full') {
-      setEditorLayout('hidden');
-    } else {
-      setEditorLayout('split');
-    }
-  };
-
-  // Render the combined room with editor
-  return (
-    <div className="flex flex-col h-screen bg-slate-900 text-white">
-      {/* Top bar with controls */}
-      <div className="flex items-center justify-between h-12 min-h-[48px] px-4 bg-slate-800 border-b border-slate-700">
-        <div className="flex items-center space-x-2">
-          <h1 className="text-lg font-bold">Room: {roomName}</h1>
-          <span className="text-sm text-slate-300">|</span>
-          <span className="text-sm text-slate-300">User: {username}</span>
-          <span className="text-sm text-slate-300">|</span>
-          <span className={`text-sm ${connectionStatus === 'connected' ? 'text-green-400' : 'text-yellow-400'}`}>
-            {connectionStatus}
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button 
-            onClick={toggleEditor}
-            className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-sm"
-          >
-            {editorLayout === 'split' ? 'Full Editor' : editorLayout === 'full' ? 'Hide Editor' : 'Show Editor'}
-          </Button>
-          <Button 
-            onClick={() => setShowChat(!showChat)}
-            className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-sm"
-          >
-            {showChat ? 'Hide Chat' : 'Show Chat'}
-          </Button>
-          <Button 
-            onClick={onLeave}
-            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-          >
-            Leave Room
-          </Button>
+  // Handle connection UI states
+  if (connectionStatus === 'initializing' || connectionStatus === 'connecting') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-slate-800 to-slate-900">
+        <div className="text-center">
+          <div className="text-xl text-white mb-6">Connecting to <span className="font-bold">{roomName}</span></div>
+          <div className="flex items-center justify-center">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full border-t-4 border-b-4 border-blue-500 animate-spin"></div>
+              <div className="w-12 h-12 rounded-full border-r-4 border-l-4 border-transparent absolute top-0 animate-ping opacity-60"></div>
+            </div>
+          </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Main content area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Video grid */}
-        <div className={`${editorLayout === 'full' ? 'hidden' : editorLayout === 'hidden' ? 'w-full' : 'w-1/2'} h-full`}>
-          <div className="h-full flex flex-col">
-            <div className="flex-1 overflow-hidden">
-              <GridLayout
-                tracks={tracks}
-                style={{ height: '100%' }}
-              >
-                <ParticipantTile />
-              </GridLayout>
+  if (connectionStatus === 'disconnected' || connectionStatus === 'connection-failed') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-slate-800 to-slate-900">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-2xl p-6">
+          <div className="flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
             </div>
-            <RoomAudioRenderer />
-            <EnhancedControlBar 
-              room={room} 
-              isMobile={isMobile} 
-              isVisible={isControlsVisible} 
-            />
           </div>
+          
+          <h2 className="text-xl text-center text-red-600 mb-2 font-bold">Connection Failed</h2>
+          <p className="mb-4 text-slate-700 text-center">Could not connect to the LiveKit server.</p>
+          
+          {errorDetails && (
+            <div className="bg-slate-100 p-4 rounded-lg overflow-auto mb-4 border border-slate-200">
+              <p className="font-mono text-sm break-words text-slate-700">{errorDetails}</p>
+            </div>
+          )}
+          
+          <div className="bg-yellow-50 p-4 rounded-lg mb-6 border border-yellow-200">
+            <h3 className="font-bold text-yellow-800 mb-2 flex items-center">
+              <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
+              </svg>
+              Troubleshooting:
+            </h3>
+            <ul className="list-disc pl-5 text-slate-700 space-y-1">
+              <li>Check that your LiveKit server is running</li>
+              <li>Verify NEXT_PUBLIC_LIVEKIT_URL in your .env file starts with "wss://"</li>
+              <li>Ensure LIVEKIT_API_KEY and LIVEKIT_API_SECRET are set correctly</li>
+              <li>Check your browser's console for more details</li>
+            </ul>
+          </div>
+          
+          <button 
+            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-md"
+            onClick={onLeave}
+          >
+            Back to Join Screen
+          </button>
         </div>
+      </div>
+    );
+  }
 
-        {/* Editor section */}
-        {editorLayout !== 'hidden' && (
-          <div className={`${editorLayout === 'full' ? 'w-full' : 'w-1/2'} h-full flex flex-col border-l border-slate-700`}>
-            <div className="flex items-center justify-between h-10 min-h-[40px] px-4 bg-slate-800 border-b border-slate-700">
-              <div className="flex items-center space-x-2">
-                <select
-                  value={language}
-                  onChange={(e) => handleLanguageChange(e.target.value)}
-                  className="bg-slate-700 text-white px-2 py-1 rounded text-sm"
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang} value={lang}>
-                      {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={theme}
-                  onChange={(e) => setTheme(e.target.value)}
-                  className="bg-slate-700 text-white px-2 py-1 rounded text-sm"
-                >
-                  <option value="vs-dark">Dark</option>
-                  <option value="vs-light">Light</option>
-                  <option value="hc-black">High Contrast</option>
-                </select>
-                <select
-                  value={fontSize}
-                  onChange={(e) => setFontSize(Number(e.target.value))}
-                  className="bg-slate-700 text-white px-2 py-1 rounded text-sm"
-                >
-                  {[12, 14, 16, 18, 20, 22, 24].map((size) => (
-                    <option key={size} value={size}>
-                      {size}px
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setMinimapEnabled(!minimapEnabled)}
-                  className="bg-slate-700 text-white px-2 py-1 rounded text-sm"
-                >
-                  {minimapEnabled ? "Hide Minimap" : "Show Minimap"}
-                </button>
-                <button
-                  onClick={runCode}
-                  disabled={isRunning}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                >
-                  {isRunning ? "Running..." : "Run Code"}
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-hidden">
-              <MonacoEditor
-                height="100%"
-                language={language}
-                theme={theme}
-                value={code}
-                onChange={handleEditorChange}
-                onMount={handleEditorDidMount}
-                options={{
-                  fontSize,
-                  minimap: { enabled: minimapEnabled },
-                  automaticLayout: true,
-                  scrollBeyondLastLine: false,
-                  wordWrap: "on",
-                  lineNumbers: "on",
-                  renderLineHighlight: "all",
-                  roundedSelection: false,
-                  scrollbar: {
-                    vertical: "visible",
-                    horizontal: "visible",
-                  },
-                }}
-              />
-            </div>
-            
-            {showOutput && (
-              <div className="bg-slate-800 p-2 border-t border-slate-700">
-                <div className="flex justify-between items-center mb-1">
-                  <h2 className="text-sm font-semibold">Output</h2>
-                  <button
-                    onClick={() => setShowOutput(false)}
-                    className="text-slate-400 hover:text-white text-xs"
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="bg-slate-900 p-2 rounded font-mono text-xs overflow-auto max-h-32">
-                  {error ? (
-                    <div className="text-red-500">{error}</div>
-                  ) : (
-                    <pre className="whitespace-pre-wrap">{output}</pre>
-                  )}
-                </div>
-                <div className="mt-2">
-                  <label className="block text-xs font-medium mb-1">Input (stdin):</label>
-                  <textarea
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    className="w-full bg-slate-900 text-white p-1 rounded border border-slate-700 text-xs"
-                    rows={2}
-                    placeholder="Enter input for your program..."
-                  />
-                </div>
-              </div>
-            )}
+  return (
+    <div data-lk-theme="default" className="flex flex-col h-screen bg-slate-900">
+      {/* Header with room info and controls */}
+      <div className={`bg-slate-800 text-white p-3 flex justify-between items-center shadow-md z-10 transition-opacity duration-300 ${isControlsVisible || isMobile ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="flex items-center">
+          <div className="flex items-center bg-slate-700 px-3 py-1 rounded-full">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+            <h1 className="text-lg font-semibold mr-2 truncate max-w-[150px] md:max-w-xs">{roomName}</h1>
           </div>
-        )}
-
-        {/* Chat panel */}
-        {showChat && (
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-slate-800 border-l border-slate-700 flex flex-col">
-            <div className="p-2 bg-slate-700 flex justify-between items-center">
-              <h2 className="font-semibold">Chat</h2>
-              <button 
-                onClick={() => setShowChat(false)}
-                className="text-slate-300 hover:text-white"
+          <span className="ml-2 bg-indigo-600 text-white px-2 py-0.5 rounded-full text-xs font-medium">
+            {participantCount} {participantCount === 1 ? 'participant' : 'participants'}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          {!isMobile && (
+            <button 
+              onClick={() => setShowSettings(!showSettings)}
+              className={`px-3 py-1 rounded-md text-sm transition duration-200 flex items-center ${showSettings ? 'bg-indigo-600' : 'bg-slate-700 hover:bg-slate-600'}`}
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+              Settings
+            </button>
+          )}
+          <button 
+            onClick={() => {
+              setShowChat(!showChat);
+              // On mobile, always hide settings when toggling chat
+              if (isMobile && showSettings) {
+                setShowSettings(false);
+              }
+            }}
+            className={`px-3 py-1 rounded-md text-sm transition duration-200 flex items-center ${showChat ? 'bg-indigo-600' : 'bg-slate-700 hover:bg-slate-600'}`}
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            Chat
+          </button>
+          <button 
+            onClick={onLeave} 
+            className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded-md text-sm transition duration-200 flex items-center"
+          >
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            Leave
+          </button>
+        </div>
+      </div>
+      
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Main video area */}
+        <div className={`${isMobile ? (showChat ? 'hidden' : 'w-full') : (showChat ? 'w-2/3 lg:w-3/4' : 'w-full')} h-full flex flex-col`}>
+          {showSettings && <EnhancedDeviceSettings room={room} />}
+          
+          <div className="flex-1 relative bg-slate-900">
+            <div className="absolute inset-0 w-full h-full">
+              <GridLayout 
+                tracks={tracks}
+                className="rounded-lg overflow-hidden bg-slate-800/50 backdrop-blur-sm"
               >
-                ✕
-              </button>
+                <ParticipantTile 
+                  className="[&>div]:rounded-lg [&>div]:overflow-hidden [&>div]:border [&>div]:border-slate-700 [&>div]:shadow-lg"
+                />
+              </GridLayout>
+              <RoomAudioRenderer />
+            </div>
+          </div>
+          
+          <EnhancedControlBar 
+            room={room} 
+            isMobile={isMobile}
+            isVisible={isControlsVisible} 
+          />
+        </div>
+        
+        {/* Chat sidebar */}
+        {showChat && (
+          <div className={`${isMobile ? 'w-full' : 'w-1/3 lg:w-1/4'} bg-white border-l border-slate-300 flex flex-col h-full shadow-xl`}>
+            <div className="p-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-black font-medium flex justify-between items-center">
+              <span className="flex items-center">
+                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                </svg>
+                Chat
+              </span>
+              {isMobile && (
+                <button 
+                  onClick={() => setShowChat(false)} 
+                  className="text-white hover:text-slate-200 flex items-center"
+                >
+                  <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+                  </svg>
+                  Back to Video
+                </button>
+              )}
             </div>
             <div 
               ref={chatContainerRef}
-              className="flex-1 overflow-y-auto p-2 space-y-2"
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50"
             >
-              {chatMessages.map((msg) => (
-                <div key={msg.id} className="bg-slate-700 p-2 rounded">
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-blue-300">{msg.sender}</span>
-                    <span className="text-xs text-slate-400">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <p className="text-sm mt-1">{msg.message}</p>
+              {chatMessages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                  <svg className="w-12 h-12 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                  </svg>
+                  <p>No messages yet</p>
+                  <p className="text-sm mt-1">Be the first to send a message!</p>
                 </div>
-              ))}
-            </div>
-            <div className="p-2 border-t border-slate-700">
+              ) : (
+                chatMessages.map((msg, i) => (<div key={i} className={`${msg.isLocal ? 'ml-auto' : ''} max-w-[80%] rounded-lg p-3 ${msg.isLocal ? 'bg-blue-500 text-white' : 'bg-white border border-slate-200'} shadow-sm`}>
+                  {!msg.isLocal && <div className="font-medium text-sm text-slate-700 mb-1">{msg.sender}</div>}
+                  <div className={`text-sm ${msg.isLocal ? 'text-white' : 'text-slate-800'}`}>{msg.message}</div>
+                  <div className={`text-xs mt-1 ${msg.isLocal ? 'text-blue-200' : 'text-slate-500'}`}>
+                    {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="p-3 bg-white border-t border-slate-200">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              sendChatMessage();
+            }}>
               <div className="flex">
                 <input
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
-                  className="flex-1 bg-slate-700 text-white px-3 py-1 rounded-l focus:outline-none"
-                  placeholder="Type a message..."
+                  className="flex-1 p-2 rounded-l-lg border border-r-0 border-slate-300  text-black focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-transparent"
+                  placeholder="Type your message..."
                 />
                 <button
-                  onClick={sendChatMessage}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-r"
+                  type="submit"
+                  disabled={!chatInput.trim()}
+                  className="bg-blue-600 text-white rounded-r-lg px-4 py-2 disabled:bg-blue-400"
                 >
-                  Send
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
+                  </svg>
                 </button>
               </div>
-            </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
+}
+
+// Enhanced device settings component
+function EnhancedDeviceSettings({ room }) {
+const [devices, setDevices] = useState({
+  audioInput: [],
+  audioOutput: [],
+  videoInput: []
+});
+const [selectedDevices, setSelectedDevices] = useState({
+  audioInput: '',
+  audioOutput: '',
+  videoInput: ''
+});
+const [isLoading, setIsLoading] = useState(true);
+
+useEffect(() => {
+  async function loadDevices() {
+    try {
+      setIsLoading(true);
+      // Request permissions first
+      await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      
+      // Get all devices
+      const mediaDevices = await navigator.mediaDevices.enumerateDevices();
+      
+      const audioInputDevices = mediaDevices.filter(device => device.kind === 'audioinput');
+      const audioOutputDevices = mediaDevices.filter(device => device.kind === 'audiooutput');
+      const videoInputDevices = mediaDevices.filter(device => device.kind === 'videoinput');
+      
+      setDevices({
+        audioInput: audioInputDevices,
+        audioOutput: audioOutputDevices,
+        videoInput: videoInputDevices
+      });
+      
+      // Get current selections from LiveKit if possible
+      if (room && room.localParticipant) {
+        const currentAudioTrack = room.localParticipant.getTrack(Track.Source.Microphone)?.track;
+        const currentVideoTrack = room.localParticipant.getTrack(Track.Source.Camera)?.track;
+        
+        if (currentAudioTrack) {
+          const settings = currentAudioTrack.getSettings();
+          if (settings.deviceId) {
+            setSelectedDevices(prev => ({ ...prev, audioInput: settings.deviceId }));
+          }
+        }
+        
+        if (currentVideoTrack) {
+          const settings = currentVideoTrack.getSettings();
+          if (settings.deviceId) {
+            setSelectedDevices(prev => ({ ...prev, videoInput: settings.deviceId }));
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load devices', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  loadDevices();
+}, [room]);
+
+// Handle device changes
+const handleDeviceChange = async (deviceType, deviceId) => {
+  try {
+    setSelectedDevices(prev => ({ ...prev, [deviceType]: deviceId }));
+    
+    if (deviceType === 'audioInput') {
+      await room.switchActiveDevice('audioinput', deviceId);
+    } else if (deviceType === 'audioOutput') {
+      await room.switchActiveDevice('audiooutput', deviceId);
+    } else if (deviceType === 'videoInput') {
+      await room.switchActiveDevice('videoinput', deviceId);
+    }
+  } catch (e) {
+    console.error(`Failed to switch ${deviceType}`, e);
+  }
+};
+
+return (
+  <div className="bg-slate-800 text-white p-4 z-20 border-b border-slate-700">
+    <h3 className="font-medium mb-4 flex items-center">
+      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+      </svg>
+      Device Settings
+    </h3>
+    
+    {isLoading ? (
+      <div className="flex justify-center py-4">
+        <div className="w-6 h-6 border-t-2 border-r-2 border-blue-500 rounded-full animate-spin"></div>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Camera Select */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">Camera</label>
+          <select
+            value={selectedDevices.videoInput}
+            onChange={(e) => handleDeviceChange('videoInput', e.target.value)}
+            className="bg-slate-700 text-white w-full p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {devices.videoInput.length === 0 ? (
+              <option value="">No cameras found</option>
+            ) : (
+              devices.videoInput.map(device => (
+                <option key={device.deviceId} value={device.deviceId}>
+                  {device.label || `Camera ${device.deviceId.slice(0, 5)}...`}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+        
+        {/* Microphone Select */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">Microphone</label>
+          <select
+            value={selectedDevices.audioInput}
+            onChange={(e) => handleDeviceChange('audioInput', e.target.value)}
+            className="bg-slate-700 text-white w-full p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {devices.audioInput.length === 0 ? (
+              <option value="">No microphones found</option>
+            ) : (
+              devices.audioInput.map(device => (
+                <option key={device.deviceId} value={device.deviceId}>
+                  {device.label || `Microphone ${device.deviceId.slice(0, 5)}...`}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+        
+        {/* Speaker Select */}
+        <div>
+          <label className="block text-sm font-medium mb-2 text-slate-300">Speaker</label>
+          <select
+            value={selectedDevices.audioOutput}
+            onChange={(e) => handleDeviceChange('audioOutput', e.target.value)}
+            className="bg-slate-700 text-white w-full p-2 rounded-md border border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {devices.audioOutput.length === 0 ? (
+              <option value="">No speakers found</option>
+            ) : (
+              devices.audioOutput.map(device => (
+                <option key={device.deviceId} value={device.deviceId}>
+                  {device.label || `Speaker ${device.deviceId.slice(0, 5)}...`}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }
 
 // Enhanced control bar with animations and better UI

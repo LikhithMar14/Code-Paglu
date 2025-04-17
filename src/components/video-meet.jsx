@@ -11,13 +11,14 @@ import {
 } from "@livekit/components-react"
 import "@livekit/components-styles"
 
-const VideoMeet = () => {
+export const VideoMeet = () => {
   const [token, setToken] = useState("")
   const [roomName, setRoomName] = useState("")
+  const [error, setError] = useState("")
 
   const handleConnect = async () => {
     try {
-
+      setError("")
       const response = await fetch("/api/get-participant-token", {
         method: "POST",
         headers: {
@@ -28,11 +29,17 @@ const VideoMeet = () => {
           username: "User-" + Math.floor(Math.random() * 1000),
         }),
       })
-      console.log("response", response)
+
       const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to connect to room")
+      }
+
       setToken(data.token)
     } catch (error) {
       console.error("Error getting token:", error)
+      setError(error.message || "Failed to connect to room")
     }
   }
 
@@ -57,9 +64,13 @@ const VideoMeet = () => {
               />
             </div>
 
+            {error && (
+              <div className="text-red-500 text-sm">{error}</div>
+            )}
+
             <button
               onClick={handleConnect}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!roomName}
             >
               Join Meeting
