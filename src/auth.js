@@ -1,67 +1,126 @@
-import Google from "next-auth/providers/google";
 import db from "@/db";
+import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 
 export const authOptions = {
   providers: [
-    Google({
+    GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }),
+    CredentialsProvider({
+      id: "credentials",
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Email and password required");
+        }
+
+        try {
+          const user = await db.user.findUnique({
+            where: { email: credentials.email }
+          });
+
+          if (!user || !user.password) {
+            throw new Error("Invalid email or password");
+          }
+
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+          if (!isPasswordValid) {
+            throw new Error("Invalid email or password");
+          }
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image
+          };
+        } catch (error) {
+          console.error("Error in credentials authorize:", error);
+          throw new Error(error.message || "Authentication failed");
+        }
+      }
+    })
   ],
   pages: {
     signIn: '/signin',
   },
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log("signIn callback triggered");
       if (profile?.email) {
-
-        let dbUser = await db.user.findUnique({
-          where: { email: profile.email },
-        });
-
-        if (!dbUser) {
-          const nameParts = user.name?.split('|').map(part => part.trim()) || [];
+        try {
+          // Find the user or create if they don't exist
+          let dbUser = await db.user.findUnique({
+            where: { email: profile.email },
+          });
           
-          let name, admissionNo;
-          
-          if (nameParts.length > 1) {
-            name = nameParts[0];
-            admissionNo = nameParts[1];
-          } else {
-            name = user.name || '';
-            admissionNo = profile.email.split('@')[0] || '';
-          }
-          try {
+          if (!dbUser) {
+            // Simplify name handling
+            const name = user.name || '';
+            
             dbUser = await db.user.create({
               data: {
                 name,
                 email: profile.email,
-                admissionNo,
                 image: user.image,
               },
             });
-          } catch (error) {
-            console.error("Error creating user:", error);
-            return false;
+            console.log("User created:", dbUser);
+          } else {
+            // Update existing user info if needed
+            await db.user.update({
+              where: { email: profile.email },
+              data: {
+                name: user.name || dbUser.name,
+                image: user.image || dbUser.image,
+              },
+            });
+            console.log("User updated:", dbUser.id);
           }
+          return true;
+        } catch (error) {
+          console.error("Error handling user:", error);
+          return false;
         }
-        return true;
       }
       return false;
     },
     async jwt({ token, user, account, profile }) {
+      // Add database user info to the token
       if (account && profile) {
-        const dbUser = await db.user.findUnique({
-          where: { email: profile.email },
-        });
+        try {
+          const dbUser = await db.user.findUnique({
+            where: { email: profile.email },
+          });
+          
+          if (dbUser) {
+            token.dbUserId = dbUser.id;
+            // Add any other fields you want to include
+          }
+        } catch (error) {
+          console.error("Error fetching user in JWT callback:", error);
+        }
       }
-      
       return token;
     },
     async session({ session, token }) {
       if (token.sub) {
         session.user.id = token.sub;
       }
+      
+      // Add database user ID to the session
+      if (token.dbUserId) {
+        session.user.dbUserId = token.dbUserId;
+      }
+      
       return session;
     },
   },
@@ -70,4 +129,3 @@ export const authOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
-

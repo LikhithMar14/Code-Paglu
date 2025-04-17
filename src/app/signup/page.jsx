@@ -61,14 +61,17 @@ export default function SignUp() {
       }
       
       // After successful registration, sign in the user
-      await signIn("credentials", {
+      const signInResult = await signIn("credentials", {
         redirect: false,
         email: formData.email,
         password: formData.password,
       });
       
+      if (signInResult?.error) {
+        throw new Error(signInResult.error || "Login failed after registration");
+      }
+
       window.location.href = "/dashboard";
-      
     } catch (error) {
       console.error("Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");

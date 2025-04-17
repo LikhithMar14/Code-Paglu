@@ -57,9 +57,7 @@ export default function SignIn() {
           <p className="mb-1 font-medium">
             This portal is exclusively for SRM AP students
           </p>
-          <p className="text-gray-500">
-            Please use your @srmap.edu.in email address to access
-          </p>
+  
         </div>
 
         <div className="mt-8 text-center text-xs text-gray-500">
