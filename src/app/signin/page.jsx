@@ -17,7 +17,7 @@ export default function SignIn() {
       setError("");
 
       await signIn("google", {
-        callbackUrl: "/dashboard",
+        callbackUrl: "/join",
       });
     } catch (error) {
       console.error("Authentication error:", error);

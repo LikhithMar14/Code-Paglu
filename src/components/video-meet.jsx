@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import {
   LiveKitRoom,
@@ -10,88 +11,112 @@ import {
   useTracks,
 } from "@livekit/components-react"
 import "@livekit/components-styles"
+import { Camera, MicrophoneOff, Mic, CameraOff, ScreenShare, Phone, UserPlus, Settings } from "lucide-react"
 
-export const VideoMeet = () => {
-  const [token, setToken] = useState("")
-  const [roomName, setRoomName] = useState("")
+export const VideoMeet = ({ token, roomName }) => {
   const [error, setError] = useState("")
+  const [isConnected, setIsConnected] = useState(false)
+  
+  // Handle connection errors
+  const handleError = (err) => {
+    console.error("LiveKit connection error:", err)
+    setError("Failed to connect to meeting room. Please check your connection.")
+    setIsConnected(false)
+  }
+  
+  // Handle successful connection
+  const handleConnected = () => {
+    setIsConnected(true)
+    setError("")
+  }
 
-  const handleConnect = async () => {
-    try {
-      setError("")
-      const response = await fetch("/api/get-participant-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          room: roomName,
-          username: "User-" + Math.floor(Math.random() * 1000),
-        }),
-      })
-
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to connect to room")
-      }
-
-      setToken(data.token)
-    } catch (error) {
-      console.error("Error getting token:", error)
-      setError(error.message || "Failed to connect to room")
+  // Environmental variables check
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_LIVEKIT_URL) {
+      setError("LiveKit server URL is not configured properly.")
     }
-  }
+  }, [])
 
-  if (token === "") {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-900">
-        <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">VideoMeet</h1>
-            <p className="text-gray-400">Connect to a room to start your meeting</p>
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-gray-300 mb-2">Room Name</label>
-              <input
-                type="text"
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                className="w-full bg-gray-700 text-white rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter room name"
-              />
-            </div>
-
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
-            )}
-
-            <button
-              onClick={handleConnect}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!roomName}
-            >
-              Join Meeting
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Validate props
+  useEffect(() => {
+    if (!token) {
+      setError("Authentication token is required.")
+    }
+    if (!roomName) {
+      setError("Room name is required.")
+    }
+  }, [token, roomName])
 
   return (
-    <LiveKitRoom
-      token={token}
-      serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-      connect={true}
-      video={true}
-      audio={true}
-    >
-      <VideoConference />
-      <RoomAudioRenderer />
-    </LiveKitRoom>
+    <div className="flex flex-col h-screen bg-gray-900">
+      {/* Header */}
+      <div className="flex justify-between items-center px-6 py-4 bg-gray-800 border-b border-gray-700">
+        <div className="flex items-center space-x-2">
+          <div className="h-3 w-3 rounded-full bg-green-500"></div>
+          <h2 className="text-xl font-semibold text-white">{roomName || "Video Conference"}</h2>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-all">
+            <UserPlus size={16} />
+            <span>Invite</span>
+          </button>
+          <button className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md transition-all">
+            <Settings size={16} />
+            <span>Settings</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Error display */}
+      {error && (
+        <div className="p-4 bg-red-500 text-white text-center">
+          {error}
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className="flex-1 relative">
+        <LiveKitRoom
+          token={token}
+          serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+          connect={true}
+          video={true}
+          audio={true}
+          onError={handleError}
+          onConnected={handleConnected}
+          data-lk-theme="default"
+        >
+          <div className="h-full">
+            <VideoConference
+              className="rounded-lg overflow-hidden h-full"
+              style={{
+                height: "100%",
+                borderRadius: "0.5rem",
+              }}
+            />
+
+          </div>
+          
+          {/* Custom control bar */}
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center justify-center space-x-4 bg-gray-800 bg-opacity-80 p-3 rounded-full backdrop-blur-sm shadow-lg">
+            <button className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition-all">
+              <Mic size={20} />
+            </button>
+            <button className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition-all">
+              <Camera size={20} />
+            </button>
+            <button className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 text-white transition-all">
+              <ScreenShare size={20} />
+            </button>
+            <button className="p-3 rounded-full bg-red-600 hover:bg-red-700 text-white transition-all">
+              <Phone size={20} />
+            </button>
+          </div>
+          
+          <RoomAudioRenderer />
+        </LiveKitRoom>
+      </div>
+    </div>
   )
 }
 

@@ -2,6 +2,7 @@ import db from "@/db";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { getSession } from "next-auth/react";
 
 export const authOptions = {
   providers: [
@@ -20,23 +21,23 @@ export const authOptions = {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email and password required");
         }
-
+        
         try {
           const user = await db.user.findUnique({
             where: { email: credentials.email }
           });
           console.log("User:", user);
-
+          
           if (!user || !user.password) {
             throw new Error("Invalid email or password");
           }
-
+          
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-
+          
           if (!isPasswordValid) {
             throw new Error("Invalid email or password");
           }
-
+          
           return {
             id: user.id,
             name: user.name,
@@ -77,7 +78,6 @@ export const authOptions = {
             });
             console.log("User created:", dbUser);
           } else {
-
             await db.user.update({
               where: { email: profile.email },
               data: {
@@ -125,6 +125,31 @@ export const authOptions = {
       
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // If the URL is relative, prepend the base URL
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // If it's on the same origin, allow it
+      else if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      
+      // For successful sign-in, redirect to a specific page
+      if (url.includes("callbackUrl")) {
+        // You could implement custom logic here based on the user
+        // For example, redirect to dashboard after successful sign-in
+        const session = await getSession();
+        
+        if (session?.user) {
+          return `${baseUrl}/join`;
+        }
+      }
+      
+      // Default fallback to the base URL
+      return baseUrl;
+    }
   },
   session: {
     strategy: "jwt",

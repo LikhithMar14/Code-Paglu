@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MonacoEditorPage } from "@/components/monacoEditor";
 import { VideoMeet } from "@/components/video-meet";
 import { motion } from "framer-motion";
@@ -12,9 +12,71 @@ import {
     Menu
 } from "lucide-react";
 
+import { LiveKitRoom } from "@livekit/components-react";
+import LiveKitChat from "@/components/chat";
+import '../livekit-styles';
+
 const Dashboard = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [activeTab, setActiveTab] = useState("editor");
+    const [roomId, setRoomId] = useState("");
+    const [username, setUsername] = useState("");
+    const [token, setToken] = useState("");
+
+
+    useEffect(() => {
+        // Use regex to extract query parameters from the URL
+        const url = window.location.href;
+        const matchRoom = url.match(/[?&]roomId=([^&]+)/);
+        const matchUser = url.match(/[?&]username=([^&]+)/);
+
+        const room = matchRoom ? decodeURIComponent(matchRoom[1]) : '';
+        const user = matchUser ? decodeURIComponent(matchUser[1]) : '';
+
+        if (room) setRoomId(room);
+        if (user) setUsername(user);
+
+        if (room && user) {
+            const fetchToken = async () => {
+                try {
+                    console.log("Fetching token for:", { room, user });
+                    const response = await fetch(
+                        `/api/token?room=${encodeURIComponent(room)}&username=${encodeURIComponent(user)}`
+                    );
+                    const data = await response.json();
+                    console.log("Token received:", data.token ? "Token exists" : "No token");
+                    setToken(data.token);
+                } catch (error) {
+                    console.error("Error fetching token:", error);
+                }
+            };
+
+            fetchToken();
+        }
+    }, []);
+
+
+    console.log("Dashboard state:", { roomId, username, hasToken: !!token });
+
+    const handleMessageReceived = (message) => {
+        // Log the received message for debugging
+        console.log("Message received:", message);
+        
+        // You can add additional processing here if needed
+        // For example, you could update a notification system or
+        // trigger a sound effect when a new message arrives
+        
+        // If you want to store messages at the dashboard level
+        // you could add a state variable for messages and update it here
+    };
+
+    // Function to handle typing indicators
+    const handleTypingIndicator = (data) => {
+        if (data.type === 'typing') {
+            console.log(`${data.user.name} is ${data.isTyping ? 'typing' : 'not typing'}`);
+            // You could update UI to show typing indicators
+        }
+    };
 
     const menuItems = [
         { icon: <Code2 className="h-5 w-5" />, label: "Editor", id: "editor" },
@@ -77,13 +139,22 @@ const Dashboard = () => {
 
                 {/* Content Area */}
                 <main className="p-6">
-                    {activeTab === "editor" && <MonacoEditorPage />}
-                    {activeTab === "video" && <VideoMeet />}
-                    {activeTab === "chat" && (
-                        <div className="text-center text-gray-400 py-12">
-                            <MessageSquare className="h-12 w-12 mx-auto mb-4" />
-                            <p>Chat functionality will be implemented here</p>
-                        </div>
+                    {activeTab === "editor" && <MonacoEditorPage token={token} roomId={roomId} />}
+                    {activeTab === "video" && <VideoMeet token={token? token : ""} roomName={roomId}/>}
+                    {activeTab === "chat" && token && (
+                                <LiveKitRoom
+                                token={token}
+                                serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+                                connect={true}
+                                data-lk-theme="default"
+                                className="h-full"
+                              >
+                                <LiveKitChat
+                                  roomId={roomId}
+                                  userName={username}
+                                  onMessageReceived={handleMessageReceived}
+                                />
+                              </LiveKitRoom>
                     )}
                 </main>
             </div>

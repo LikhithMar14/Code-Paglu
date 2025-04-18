@@ -71,7 +71,7 @@ export default function SignUp() {
         throw new Error(signInResult.error || "Login failed after registration");
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = "/join";
     } catch (error) {
       console.error("Registration error:", error);
       setError(error.message || "Registration failed. Please try again.");

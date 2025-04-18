@@ -1,6 +1,9 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import { Room, RoomEvent, ConnectionState } from 'livekit-client';
+import { RoomContext } from '@livekit/components-react';
+import debounce from 'lodash/debounce';
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -58,7 +61,36 @@ const LANGUAGE_MAPPING = {
 
 const THEMES = ["vs", "vs-dark", "hc-black", "hc-light"];
 
-export const MonacoEditorPage = () => {
+// Add custom animation styles
+const typingAnimation = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  
+  @keyframes typingDots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+    100% { content: ''; }
+  }
+  
+  .typing-dots::after {
+    content: '';
+    animation: typingDots 1.5s infinite;
+    display: inline-block;
+    width: 1.5em;
+    text-align: left;
+  }
+`;
+
+export const MonacoEditorPage = ({ token, roomId }) => {
+  // State variables
   const [code, setCode] = useState("// Write your code here");
   const [language, setLanguage] = useState("javascript");
   const [theme, setTheme] = useState("vs-dark");
@@ -71,13 +103,323 @@ export const MonacoEditorPage = () => {
   const [userInput, setUserInput] = useState("");
   const [editorHeight, setEditorHeight] = useState("400px");
 
-  const handleEditorChange = (value) => {
-    setCode(value);
-  };
+  // Collaboration state
+  const [roomInstance] = useState(() => new Room({
+    adaptiveStream: true,
+    dynacast: true,
+  }));
+  const [roomName, setRoomName] = useState('editor-room');
+  const [username, setUsername] = useState(() => {
+    if (roomId) {
+      return `user-${roomId.substring(0, 6)}`;
+    }
+    return `user-${Date.now().toString(36).substring(2, 8)}`;
+  });
+  const [joined, setJoined] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('initializing');
+  const [errorDetails, setErrorDetails] = useState(null);
+  const [isEditorReady, setIsEditorReady] = useState(false);
+  const [collaborators, setCollaborators] = useState([]);
+  const [editorInstance, setEditorInstance] = useState(null);
+  const [activeEditor, setActiveEditor] = useState(null);
+  const [cursorPositions, setCursorPositions] = useState({});
+  const [typingUsers, setTypingUsers] = useState({});
+  const [usernameMap, setUsernameMap] = useState({});
+  const [participantCount, setParticipantCount] = useState(0);
 
-  const handleEditorDidMount = (editor, monaco) => {
+  // Refs
+  const ignoreChanges = useRef(false);
+  const mountedRef = useRef(true);
+
+  // Event handler functions
+  const handleConnectionStateChanged = useCallback((state) => {
+    if (!mountedRef.current) return;
+    
+    setConnectionStatus(state);
+    console.log('Connection state changed:', state);
+    
+    if (state === ConnectionState.Disconnected) {
+      setJoined(false);
+    }
+  }, []);
+
+  const handleError = useCallback((error) => {
+    if (!mountedRef.current) return;
+    console.error('Room error:', error);
+    setErrorDetails(error.message);
+  }, []);
+
+  const handleParticipantConnected = useCallback(() => {
+    if (!mountedRef.current) return;
+    
+    // Check if roomInstance and participants exist before accessing
+    if (roomInstance && roomInstance.participants) {
+      const participants = Array.from(roomInstance.participants.values());
+      setCollaborators(participants);
+      setParticipantCount(participants.length + 1); // +1 for local participant
+      
+      console.log('Participant connected. Total participants:', participants.length + 1);
+    }
+  }, [roomInstance]);
+
+  const handleParticipantDisconnected = useCallback(() => {
+    if (!mountedRef.current) return;
+    
+    // Check if roomInstance and participants exist before accessing
+    if (roomInstance && roomInstance.participants) {
+      const participants = Array.from(roomInstance.participants.values());
+      setCollaborators(participants);
+      setParticipantCount(participants.length + 1);
+      
+      console.log('Participant disconnected. Total participants:', participants.length + 1);
+    }
+  }, [roomInstance]);
+
+  const handleDataReceived = useCallback((payload, participant) => {
+    try {
+      const data = JSON.parse(new TextDecoder().decode(payload));
+      console.log("Data received:", data);
+      
+      // Handle different types of data
+      switch (data.type) {
+        case 'code-update':
+          // Only update code if it's from another participant
+          if (data.username !== username && !ignoreChanges.current) {
+            console.log("Updating code from participant:", data.username);
+            setCode(data.content);
+            
+            // Update language if it changed
+            if (data.language && data.language !== language) {
+              setLanguage(data.language);
+            }
+          }
+          break;
+          
+        case 'cursor-position':
+          // Update cursor position for other participants
+          if (data.username !== username) {
+            setCursorPositions(prev => ({
+              ...prev,
+              [data.username]: {
+                position: data.position,
+                color: data.color,
+                timestamp: data.timestamp
+              }
+            }));
+          }
+          break;
+          
+        case 'language-change':
+          // Update language if it changed
+          if (data.language && data.language !== language) {
+            setLanguage(data.language);
+          }
+          break;
+          
+        case 'user-joined':
+          // Add user to collaborators list
+          if (data.username !== username) {
+            setCollaborators(prev => {
+              if (!prev.includes(data.username)) {
+                return [...prev, data.username];
+              }
+              return prev;
+            });
+            
+            // Update username map
+            setUsernameMap(prev => ({
+              ...prev,
+              [data.username]: data.username
+            }));
+          }
+          break;
+          
+        default:
+          console.log("Unknown data type:", data.type);
+      }
+    } catch (error) {
+      console.error("Error handling received data:", error);
+    }
+  }, [username, language]);
+
+  // Disconnect from LiveKit room
+  const disconnectRoom = useCallback(() => {
+    try {
+      if (roomInstance && roomInstance.state === ConnectionState.Connected) {
+        console.log("Disconnecting from room");
+        roomInstance.disconnect();
+        setJoined(false);
+        setConnectionStatus('disconnected');
+      }
+    } catch (error) {
+      console.error("Error disconnecting from room:", error);
+    }
+  }, [roomInstance]);
+
+  // Connect to LiveKit room
+  const connectToRoom = useCallback(async () => {
+    if (!token) {
+      console.error("No token provided for room connection");
+      setErrorDetails("No token provided for room connection");
+      return;
+    }
+
+    try {
+      setConnectionStatus('connecting');
+      
+      // Connect to the room
+      await roomInstance.connect(
+        process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://your-livekit-server.com',
+        token
+      );
+      
+      console.log("Connected to room:", roomName);
+      setJoined(true);
+      setConnectionStatus('connected');
+      
+      // Set up event listeners
+      roomInstance.on(RoomEvent.ConnectionStateChanged, handleConnectionStateChanged);
+      roomInstance.on(RoomEvent.Disconnected, () => {
+        console.log("Disconnected from room");
+        setJoined(false);
+        setConnectionStatus('disconnected');
+      });
+      roomInstance.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
+      roomInstance.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
+      roomInstance.on(RoomEvent.DataReceived, handleDataReceived);
+      
+      // Update participant count
+      if (roomInstance && roomInstance.participants) {
+        setParticipantCount(roomInstance.participants.size + 1);
+      } else {
+        setParticipantCount(1); // Just the local participant
+      }
+      
+      // Notify others that we've joined
+      if (roomInstance.localParticipant) {
+        const data = {
+          type: 'user-joined',
+          username,
+          timestamp: Date.now()
+        };
+        
+        roomInstance.localParticipant.publishData(
+          new TextEncoder().encode(JSON.stringify(data)),
+          { reliable: true }
+        );
+      }
+    } catch (error) {
+      console.error("Failed to connect to room:", error);
+      setErrorDetails(error.message || "Failed to connect to room");
+      setConnectionStatus('error');
+    }
+  }, [token, roomName, roomInstance, username, handleConnectionStateChanged, handleParticipantConnected, handleParticipantDisconnected, handleDataReceived]);
+
+  // Track cursor position changes
+  const handleCursorPositionChanged = useCallback(() => {
+    if (!editorInstance || 
+        !roomInstance || 
+        roomInstance.state !== ConnectionState.Connected || 
+        !roomInstance.localParticipant) return;
+    
+    const position = editorInstance.getPosition();
+    if (!position) return;
+    
+    // Generate a consistent color for this user
+    const userColor = `hsl(${Math.abs(username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % 360}, 70%, 60%)`;
+    
+    try {
+      const data = {
+        type: 'cursor-position',
+        position: {
+          lineNumber: position.lineNumber,
+          column: position.column
+        },
+        color: userColor,
+        timestamp: Date.now(),
+        username: username
+      };
+      
+      roomInstance.localParticipant.publishData(
+        new TextEncoder().encode(JSON.stringify(data)),
+        { reliable: false } // Use unreliable for cursor updates for better performance
+      );
+    } catch (e) {
+      console.error('Failed to publish cursor position', e);
+    }
+  }, [editorInstance, roomInstance, username]);
+
+  // Handle language change with collaboration
+  const handleLanguageChange = useCallback((newLang) => {
+    setLanguage(newLang);
+    setCode(getLanguagePlaceholder(newLang));
+    
+    if (roomInstance && 
+        roomInstance.state === ConnectionState.Connected && 
+        roomInstance.localParticipant) {
+      try {
+        const data = {
+          type: 'language-change',
+          language: newLang,
+          timestamp: Date.now()
+        };
+        
+        roomInstance.localParticipant.publishData(
+          new TextEncoder().encode(JSON.stringify(data)),
+          { reliable: true }
+        );
+      } catch (e) {
+        console.error('Failed to publish language change', e);
+      }
+    }
+  }, [roomInstance]);
+
+  const handleEditorChange = useCallback((value) => {
+    setCode(value);
+    
+    // Collaboration: Update typing status with debounce
+    const now = Date.now();
+    setTypingUsers(prev => ({
+      ...prev,
+      [username]: now
+    }));
+    
+    // Send code updates to room participants
+    if (roomInstance && 
+        roomInstance.state === ConnectionState.Connected && 
+        roomInstance.localParticipant && 
+        isEditorReady) {
+      try {
+        const data = {
+          type: 'code-update',
+          content: value,
+          language,
+          timestamp: now,
+          username: username
+        };
+        
+        roomInstance.localParticipant.publishData(
+          new TextEncoder().encode(JSON.stringify(data)),
+          { reliable: true }
+        );
+      } catch (e) {
+        console.error('Failed to publish code update', e);
+      }
+    }
+  }, [roomInstance, username, language, isEditorReady]);
+
+  const handleEditorDidMount = useCallback((editor, monaco) => {
     console.log("Editor mounted successfully");
+    setEditorInstance(editor);
+    setIsEditorReady(true);
     editor.focus();
+
+    // Set up cursor position tracking
+    editor.onDidChangeCursorPosition(handleCursorPositionChanged);
+    
+    // Set up a debounced version for performance
+    const debouncedCursorUpdate = debounce(handleCursorPositionChanged, 50);
+    editor.onDidChangeCursorSelection(debouncedCursorUpdate);
 
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function () {
       console.log("Saving code:", code);
@@ -87,9 +429,50 @@ export const MonacoEditorPage = () => {
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function () {
       runCode();
     });
-  };
+  }, [handleCursorPositionChanged, code]);
 
-  const runCode = async () => {
+  const handleJoinRoom = useCallback(() => {
+    if (!roomName.trim()) {
+      setErrorDetails("Room name cannot be empty");
+      return;
+    }
+    
+    if (!username.trim()) {
+      setErrorDetails("Username cannot be empty");
+      return;
+    }
+    
+    setErrorDetails(null);
+    setJoined(true);
+    
+    // Initialize username map with our own username
+    setUsernameMap(prev => ({
+      ...prev,
+      [username]: username
+    }));
+  }, [roomName, username]);
+
+  // Language-specific placeholders
+  const getLanguagePlaceholder = useCallback((lang) => {
+    switch (lang) {
+      case "javascript":
+        return "// JavaScript Example\nconst input = prompt('Enter your name:');\nconsole.log(`Hello, ${input}!`);\n";
+      case "python":
+        return "# Python Example\nname = input('Enter your name: ')\nprint(f'Hello, {name}!')\n";
+      case "java":
+        return "// Java Example\nimport java.util.Scanner;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner scanner = new Scanner(System.in);\n    System.out.print(\"Enter your name: \");\n    String name = scanner.nextLine();\n    System.out.println(\"Hello, \" + name + \"!\");\n  }\n}\n";
+      case "c":
+        return "// C Example\n#include <stdio.h>\n\nint main() {\n  char name[50];\n  printf(\"Enter your name: \");\n  scanf(\"%s\", name);\n  printf(\"Hello, %s!\\n\", name);\n  return 0;\n}\n";
+      case "cpp":
+        return "// C++ Example\n#include <iostream>\n#include <string>\n\nint main() {\n  std::string name;\n  std::cout << \"Enter your name: \";\n  std::cin >> name;\n  std::cout << \"Hello, \" << name << \"!\" << std::endl;\n  return 0;\n}\n";
+      case "go":
+        return "// Go Example\npackage main\n\nimport (\n  \"fmt\"\n  \"bufio\"\n  \"os\"\n  \"strings\"\n)\n\nfunc main() {\n  reader := bufio.NewReader(os.Stdin)\n  fmt.Print(\"Enter your name: \")\n  name, _ := reader.ReadString('\\n')\n  name = strings.TrimSpace(name)\n  fmt.Printf(\"Hello, %s!\\n\", name)\n}\n";
+      default:
+        return "// Write your code here";
+    }
+  }, []);
+
+  const runCode = useCallback(async () => {
     setIsRunning(true);
     setShowOutput(true);
     setError("");
@@ -162,44 +545,55 @@ export const MonacoEditorPage = () => {
     } finally {
       setIsRunning(false);
     }
-  };
-
-  const isLanguageRunnable = RUNNABLE_LANGUAGES.hasOwnProperty(language);
-
-  // Language-specific placeholders
-  const getLanguagePlaceholder = (lang) => {
-    switch (lang) {
-      case "javascript":
-        return "// JavaScript Example\nconst input = prompt('Enter your name:');\nconsole.log(`Hello, ${input}!`);\n";
-      case "python":
-        return "# Python Example\nname = input('Enter your name: ')\nprint(f'Hello, {name}!')\n";
-      case "java":
-        return "// Java Example\nimport java.util.Scanner;\n\npublic class Main {\n  public static void main(String[] args) {\n    Scanner scanner = new Scanner(System.in);\n    System.out.print(\"Enter your name: \");\n    String name = scanner.nextLine();\n    System.out.println(\"Hello, \" + name + \"!\");\n  }\n}\n";
-      case "c":
-        return "// C Example\n#include <stdio.h>\n\nint main() {\n  char name[50];\n  printf(\"Enter your name: \");\n  scanf(\"%s\", name);\n  printf(\"Hello, %s!\\n\", name);\n  return 0;\n}\n";
-      case "cpp":
-        return "// C++ Example\n#include <iostream>\n#include <string>\n\nint main() {\n  std::string name;\n  std::cout << \"Enter your name: \";\n  std::cin >> name;\n  std::cout << \"Hello, \" << name << \"!\" << std::endl;\n  return 0;\n}\n";
-      case "go":
-        return "// Go Example\npackage main\n\nimport (\n  \"fmt\"\n  \"bufio\"\n  \"os\"\n  \"strings\"\n)\n\nfunc main() {\n  reader := bufio.NewReader(os.Stdin)\n  fmt.Print(\"Enter your name: \")\n  name, _ := reader.ReadString('\\n')\n  name = strings.TrimSpace(name)\n  fmt.Printf(\"Hello, %s!\\n\", name)\n}\n";
-      default:
-        return "// Write your code here";
-    }
-  };
-
-  // Update code when language changes
-  const handleLanguageChange = (newLang) => {
-    setLanguage(newLang);
-    setCode(getLanguagePlaceholder(newLang));
-  };
+  }, [code, language, userInput]);
 
   // Adjust editor height based on screen size
-  const adjustEditorHeight = () => {
+  const adjustEditorHeight = useCallback(() => {
     if (window.innerWidth < 768) {
       setEditorHeight("300px");
     } else {
       setEditorHeight("400px");
     }
-  };
+  }, []);
+
+  // Initialize room connection when component mounts
+  useEffect(() => {
+    if (token && roomId && !joined) {
+      console.log("Initializing room connection with token and roomId:", { roomId });
+      setRoomName(roomId);
+      connectToRoom();
+    }
+  }, [token, roomId, joined, connectToRoom]);
+
+  // Clean up room connection when component unmounts
+  useEffect(() => {
+    return () => {
+      if (roomInstance && roomInstance.state === ConnectionState.Connected) {
+        console.log("Disconnecting from room on component unmount");
+        roomInstance.disconnect();
+      }
+    };
+  }, [roomInstance]);
+
+  // Connect to LiveKit room and sync data
+  useEffect(() => {
+    if (!joined) return;
+    
+    mountedRef.current = true;
+    
+    // Cleanup
+    return () => {
+      mountedRef.current = false;
+      disconnectRoom();
+      
+      roomInstance
+        .off(RoomEvent.ConnectionStateChanged, handleConnectionStateChanged)
+        .off(RoomEvent.Disconnected, () => handleConnectionStateChanged(ConnectionState.Disconnected))
+        .off(RoomEvent.ParticipantConnected, handleParticipantConnected)
+        .off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
+        .off(RoomEvent.DataReceived, handleDataReceived);
+    };
+  }, [joined, roomInstance, username, disconnectRoom, handleConnectionStateChanged, handleParticipantConnected, handleParticipantDisconnected, handleDataReceived]);
 
   // Use useEffect for the resize event listener
   useEffect(() => {
@@ -213,12 +607,41 @@ export const MonacoEditorPage = () => {
     return () => {
       window.removeEventListener("resize", adjustEditorHeight);
     };
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, [adjustEditorHeight]);
+
+  const isLanguageRunnable = RUNNABLE_LANGUAGES.hasOwnProperty(language);
 
   return (
     <div className="container mx-auto p-2 sm:p-4 max-w-full overflow-x-hidden">
-      <h1 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">Monaco Code Editor</h1>
+      <h1 className="text-xl sm:text-2xl font-bold mb-2 sm:mb-4 bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+         Code Editor
+      </h1>
 
+      {/* Collaboration Controls */}
+    
+        <div className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-sm text-gray-400">Room: </span>
+              <span className="text-white font-medium">{roomName}</span>
+              <span className="mx-2 text-gray-400">|</span>
+              <span className="text-sm text-gray-400">Connected as: </span>
+              {/* <span className="text-white font-medium">{username}</span> */}
+              <span className="mx-2 text-gray-400">|</span>
+              <span className="text-sm text-gray-400">Participants: </span>
+              <span className="text-white font-medium">{participantCount}</span>
+            </div>
+            <button
+              onClick={disconnectRoom}
+              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm"
+            >
+              Leave Room
+            </button>
+          </div>
+        </div>
+      
+
+      {/* Editor Controls */}
       <div className="flex flex-wrap gap-2 sm:gap-4 mb-2 sm:mb-4">
         <div className="w-1/2 sm:w-auto">
           <label htmlFor="language-select" className="block text-xs sm:text-sm font-medium text-gray-400 mb-1">
@@ -285,7 +708,8 @@ export const MonacoEditorPage = () => {
         </div>
       </div>
 
-      <div className="border border-white/10 rounded-lg mb-2 sm:mb-4 overflow-hidden bg-black/30 backdrop-blur-lg">
+      {/* Editor */}
+      <div className="mb-4">
         <MonacoEditor
           height={editorHeight}
           language={language}
@@ -294,23 +718,14 @@ export const MonacoEditorPage = () => {
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}
           options={{
-            automaticLayout: true,
-            minimap: { enabled: minimapEnabled },
-            scrollBeyondLastLine: false,
             fontSize: fontSize,
-            tabSize: 2,
-            wordWrap: "on",
-            formatOnPaste: true,
-            formatOnType: true,
-            renderLineHighlight: "all",
-            scrollbar: {
-              verticalScrollbarSize: 10,
-              horizontalScrollbarSize: 10,
-            },
+            minimap: { enabled: minimapEnabled },
+            automaticLayout: true,
           }}
         />
       </div>
 
+      {/* Output Section */}
       <div className="mb-2 sm:mb-4">
         <label htmlFor="user-input" className="block text-xs sm:text-sm font-medium text-gray-400 mb-1">
           Input (stdin):

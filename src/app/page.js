@@ -283,7 +283,7 @@ export default function Home() {
 
           <AnimatedSection delay={0.3}>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <GlowingButton href="/start-coding" primary className="px-10 py-5 text-lg">
+              <GlowingButton href="/signin" primary className="px-10 py-5 text-lg">
                 Start Coding Now
               </GlowingButton>
               <GlowingButton href="/demo" icon={<FaPlay className="text-violet-400" />} className="px-10 py-5 text-lg">
@@ -1178,7 +1178,7 @@ export default function Home() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <GlowingButton href="/signup" primary className="px-8 py-4 text-lg">
+                  <GlowingButton href="/signin" primary className="px-8 py-4 text-lg">
                     Start Coding Now
                   </GlowingButton>
                   <GlowingButton
